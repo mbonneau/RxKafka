@@ -1,5 +1,5 @@
 {
-    "name": "voryx/rxkafka",
+    "name": "mbonneau/rxkafka",
     "type": "library",
     "description": "RxPHP Kafka library",
     "keywords": [
