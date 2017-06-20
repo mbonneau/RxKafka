@@ -1,5 +1,6 @@
 <?php
 
+use RdKafka\Message;
 use React\EventLoop\Factory;
 use Rx\Scheduler;
 use Voryx\RxKafka\Consumer;
@@ -14,8 +15,12 @@ Scheduler::setDefaultFactory(function () use ($loop) {
 
 $topic = new Consumer('some.test.topic', 'localhost');
 
-$topic->subscribe(function ($x) {
-    echo $x . "\n";
-});
+$topic
+    ->takeWhile(function (Message $x) {
+        return $x->payload !== 'last';
+    })
+    ->subscribe(function (Message $x) {
+        echo $x->payload . "\n";
+    });
 
 $loop->run();

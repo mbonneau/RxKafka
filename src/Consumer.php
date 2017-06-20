@@ -3,6 +3,8 @@
 namespace Voryx\RxKafka;
 
 use RdKafka\Conf;
+use Rx\Disposable\CallbackDisposable;
+use Rx\Disposable\CompositeDisposable;
 use Rx\DisposableInterface;
 use Rx\Observable;
 use Rx\ObserverInterface;
@@ -52,24 +54,30 @@ class Consumer extends Observable
 
         $topic->consumeStart(0, $this->offset);
 
-        return $this->scheduler->schedulePeriodic(
+        $scheduleDisp =  $this->scheduler->schedulePeriodic(
             function () use ($topic, $observer) {
                 $n = 30; //Number of messages in one tick.  This is the longest that it will block at one time
                 $i = 0;
                 while ($i <= $n && $msg = $topic->consume(0, 0)) {
                     if (!$msg || $msg->err !== RD_KAFKA_RESP_ERR_NO_ERROR) {
                         if ($msg) {
-                            $x = 1;
+                            // there seem to be a lot of non-error errors
 //                    $obs->onError(new Exception($msg->err));
                         }
                         break;
                     }
                     $i++;
-                    $observer->onNext($msg->payload);
+                    $observer->onNext($msg);
                 }
             },
             0,
             100
         );
+
+        $cleanup = new CallbackDisposable(function () use ($rk, $topic) {
+            $topic->consumeStop(0);
+        });
+
+        return new CompositeDisposable([$scheduleDisp, $cleanup]);
     }
 }
